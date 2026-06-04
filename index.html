@@ -1,0 +1,444 @@
+```html id="f3n8q1"
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+
+<meta charset="UTF-8">
+<meta
+  name="viewport"
+  content="width=device-width, initial-scale=1.0"
+/>
+
+<title>AI Travel Search PRO</title>
+
+<style>
+
+*{
+  margin:0;
+  padding:0;
+  box-sizing:border-box;
+  font-family:Arial,sans-serif;
+}
+
+body{
+  background:#0b0f14;
+  color:white;
+  padding:30px;
+}
+
+.container{
+  max-width:1400px;
+  margin:auto;
+}
+
+h1{
+  text-align:center;
+  margin-bottom:30px;
+  font-size:42px;
+}
+
+.search-box{
+  background:#111827;
+  padding:25px;
+  border-radius:20px;
+  margin-bottom:30px;
+}
+
+.grid{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:15px;
+}
+
+input,
+select{
+  width:100%;
+  padding:14px;
+  border:none;
+  border-radius:12px;
+  background:#1f2937;
+  color:white;
+  font-size:14px;
+}
+
+button{
+  border:none;
+  padding:14px;
+  border-radius:12px;
+  cursor:pointer;
+  background:#ffd600;
+  color:black;
+  font-weight:bold;
+  transition:0.3s;
+}
+
+button:hover{
+  transform:translateY(-2px);
+}
+
+.ai-box{
+  background:#111827;
+  padding:20px;
+  border-radius:20px;
+  margin-bottom:30px;
+}
+
+.cards{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(340px,1fr));
+  gap:20px;
+}
+
+.card{
+  background:#111827;
+  border-radius:20px;
+  overflow:hidden;
+  transition:0.3s;
+}
+
+.card:hover{
+  transform:translateY(-5px);
+}
+
+.card img{
+  width:100%;
+  height:220px;
+  object-fit:cover;
+}
+
+.content{
+  padding:20px;
+}
+
+.badge{
+  display:inline-block;
+  background:#ffd600;
+  color:black;
+  padding:6px 10px;
+  border-radius:8px;
+  margin-bottom:10px;
+  font-size:12px;
+}
+
+.link{
+  display:inline-block;
+  margin-top:15px;
+  color:#ff5252;
+  text-decoration:none;
+}
+
+.loading{
+  color:#ffd600;
+}
+
+.error{
+  color:#ff5252;
+}
+
+.success{
+  color:#00e676;
+}
+
+@media(max-width:900px){
+
+  .grid{
+    grid-template-columns:1fr;
+  }
+
+  h1{
+    font-size:30px;
+  }
+
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div class="container">
+
+<h1>✈ AI Travel Search PRO</h1>
+
+<div class="search-box">
+
+<div class="grid">
+
+<select id="country">
+
+<option value="Turkey">
+Турция
+</option>
+
+<option value="Egypt">
+Египет
+</option>
+
+<option value="Thailand">
+Таиланд
+</option>
+
+<option value="UAE">
+ОАЭ
+</option>
+
+</select>
+
+<input
+type="date"
+id="date"
+/>
+
+<input
+type="number"
+id="budget"
+placeholder="Макс. бюджет"
+/>
+
+<button onclick="searchTours()">
+Найти туры
+</button>
+
+</div>
+
+</div>
+
+<div class="ai-box">
+
+<h2>🤖 AI поиск туров</h2>
+
+<div id="aiResult">
+Введите параметры поиска
+</div>
+
+</div>
+
+<div class="cards" id="cards"></div>
+
+</div>
+
+<script>
+
+// ========================================
+// INSERT YOUR API KEY
+// ========================================
+
+const TAVILY_API_KEY =
+"YOUR_KEY";
+
+// ========================================
+// SEARCH FUNCTION
+// ========================================
+
+async function searchTours(){
+
+  const country =
+    document.getElementById("country").value;
+
+  const date =
+    document.getElementById("date").value;
+
+  const budget =
+    document.getElementById("budget").value;
+
+  const cards =
+    document.getElementById("cards");
+
+  const aiResult =
+    document.getElementById("aiResult");
+
+  const query = `
+    cheapest tours to ${country}
+    all inclusive hotels
+    departure ${date}
+    budget ${budget}
+  `;
+
+  aiResult.innerHTML = `
+    <div class="loading">
+      🔍 Поиск туров...
+    </div>
+  `;
+
+  cards.innerHTML = "";
+
+  try{
+
+    const response = await fetch(
+      "https://api.tavily.com/search",
+      {
+
+        method:"POST",
+
+        mode:"cors",
+
+        headers:{
+          "Content-Type":"application/json"
+        },
+
+        body:JSON.stringify({
+
+          api_key:TAVILY_API_KEY,
+
+          query:query,
+
+          search_depth:"advanced",
+
+          include_answer:true,
+
+          include_images:true,
+
+          max_results:6
+
+        })
+
+      }
+    );
+
+    // =========================
+    // HTTP CHECK
+    // =========================
+
+    if(!response.ok){
+
+      throw new Error(
+        "HTTP " + response.status
+      );
+
+    }
+
+    // =========================
+    // JSON
+    // =========================
+
+    const data =
+      await response.json();
+
+    console.log(data);
+
+    // =========================
+    // EMPTY RESULTS
+    // =========================
+
+    if(!data.results){
+
+      throw new Error(
+        "Нет результатов"
+      );
+
+    }
+
+    // =========================
+    // SUCCESS
+    // =========================
+
+    aiResult.innerHTML = `
+      <div class="success">
+        ✅ Найдены лучшие туры
+        для ${country}
+      </div>
+    `;
+
+    renderResults(data.results);
+
+  }catch(error){
+
+    console.error(error);
+
+    aiResult.innerHTML = `
+      <div class="error">
+
+      ❌ ${error.message}
+
+      <br><br>
+
+      Возможные причины:
+
+      <br><br>
+
+      • Tavily блокирует CORS
+      <br>
+      • Неверный API ключ
+      <br>
+      • Превышен лимит API
+      <br>
+      • GitHub Pages domain blocked
+
+      </div>
+    `;
+
+  }
+
+}
+
+// ========================================
+// RENDER RESULTS
+// ========================================
+
+function renderResults(results){
+
+  const cards =
+    document.getElementById("cards");
+
+  cards.innerHTML =
+    results.map(item => `
+
+      <div class="card">
+
+        <img
+          src="${
+            item.image_url
+            ||
+            "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?q=80&w=1200&auto=format&fit=crop"
+          }"
+        >
+
+        <div class="content">
+
+          <div class="badge">
+            LIVE TOUR
+          </div>
+
+          <h2>
+            ${item.title || "Тур"}
+          </h2>
+
+          <p
+            style="
+            margin-top:10px;
+            line-height:1.6;
+            "
+          >
+
+            ${
+              item.content
+              ?
+              item.content.slice(0,220)
+              :
+              "Описание отсутствует"
+            }...
+
+          </p>
+
+          <a
+            class="link"
+            href="${item.url}"
+            target="_blank"
+          >
+            ▶ Открыть источник
+          </a>
+
+        </div>
+
+      </div>
+
+    `).join("");
+
+}
+
+</script>
+
+</body>
+</html>
+```
